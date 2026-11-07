@@ -1,0 +1,23 @@
+# Large raw MCMC outputs, at any depth
+mcmc.txt
+mcmctree.out
+
+# Large local sequence inputs and generated alignments
+/chromosome_alignments_trimmed/
+/chromosome_alignments_sitefiltered/
+/prepared/
+*.phy
+
+# Approximate likelihood intermediates and run logs
+in.BV
+out.BV
+*.console.log
+CHAIN_COMPLETE
+PREPARE_COMPLETE
+
+# Local caches
+.DS_Store
+__pycache__/
+*.pyc
+.Rhistory
+.RData
