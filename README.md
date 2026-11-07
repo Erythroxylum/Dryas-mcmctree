@@ -225,21 +225,22 @@ TreeAnnotator uses `-burnin 0 -heights median` because the exported samples are 
 
 ## 6. Figure preparation
 
-The p28 figure tree is:
+Run the population tree/map plot from the project root. Supply the full 32-tip annotated MCC, including the four outgroups:
 
-```text
-results_unified/p28/fossil/exports/dryas_MCC.tre
+```bash
+Rscript -e 'install.packages(c("ape", "sf", "maps", "BiocManager"), repos="https://cloud.r-project.org"); BiocManager::install("treeio", ask=FALSE)'
+Rscript plot_p28_equalearth_hpd.R MCC_28_32tip.tre
 ```
 
-The 15-tip analysis's Dryas-only tree is:
+The second command accepts an explicit tree path; for a newly summarized fossil analysis use `results_unified/p28/fossil/exports/full_MCC.tre`.
 
-```text
-results_unified/15tip/fossil/exports/dryas_MCC.tre
-```
+Place `Dryas_sampledata_popgen.csv` in the project root. Required columns are sampleID, s170-p28, s170_BPP, s380, Longitude, Latitude, and Epithet. If labels or species assignments differ, provide `population_species_key.csv` with tree_tip,population,species, one row per population.
 
-The exporter retains outgroup sample IDs and applies Dryas species/population labels; the grandis and subincisa corrections must be retained. Geographic display labels are in `clade_membership.tsv` column `tip.label`. Apply those at the plotting stage using the sample/population mapping, preserving unique identifiers for joins.
+The script reads node HPDs directly from the selected MCC, prunes four named outgroups, matches intervals by descendant populations, and scales the age axis to include every HPD. Plotted ages come from the supplied branch lengths, supporting mean or median summaries. Branch lengths are already in Ma. No separate old HPD CSV is required.
 
-The existing plotting script is a separate downstream step, not a stage of `workflow.sh`. Before using it, update its tree path, connect `tip.label`, and derive any required node-age/HPD table from the selected MCC tree. Its earlier hard-coded 14 Ma age limit and comparison against mean node ages need revision for older fossil-calibrated trees summarized with median heights. The workflow does not currently generate that plotting CSV or a finished Fig. 3.
+Outputs are `figures/figure3_p28_species_map.pdf`, `.png`, and node-age, color, and sample-audit CSVs. This produces the dated population tree/map component, not the BPP model-diagram panel.
+
+This revision has not been executed in the editing environment because R is unavailable. Run the command locally before treating the outputs as validated.
 
 ## 7. Scenarios and calibrations
 
