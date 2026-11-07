@@ -89,9 +89,21 @@ if (!is.null(key)) {
   if (anyDuplicated(key$tree_tip) || anyDuplicated(key$population) ||
       !setequal(key$tree_tip,tr$tip.label)) stop("Key must map all 28 tree tips one-to-one to populations.")
   tr$tip.label <- key$population[match(tr$tip.label,key$tree_tip)]
+  # Map metadata labels using the same explicit key as the tree.
+  ix <- match(d$population, key$tree_tip)
+  mapped <- !is.na(ix)
+  ambiguous <- mapped & d$population %in% key$population &
+    d$population != key$population[ix]
+  if (any(ambiguous, na.rm=TRUE))
+    stop("Ambiguous key: a label is both an original and a different revised population.")
+  d$population[mapped] <- key$population[ix[mapped]]
 }
-if (!setequal(unique(d$population[d$in_s170]), tr$tip.label))
-  stop("Tree tips and revised population names differ. Supply population_species_key.csv with tree_tip,population,species.")
+if (!setequal(unique(d$population[d$in_s170]), tr$tip.label)) {
+  metadata_pops <- unique(d$population[d$in_s170])
+  stop("Population mismatch after applying key.\nOnly in S170 metadata: ",
+       paste(setdiff(metadata_pops, tr$tip.label), collapse=", "),
+       "\nOnly in tree: ", paste(setdiff(tr$tip.label, metadata_pops), collapse=", "))
+}
 pop_species <- setNames(rep(NA_character_,length(tr$tip.label)),tr$tip.label)
 for (pop in tr$tip.label) {
   values <- unique(na.omit(d$species[d$in_s170 & d$population == pop]))
