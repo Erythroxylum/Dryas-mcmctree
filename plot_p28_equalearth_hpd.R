@@ -8,7 +8,7 @@ library(sf)
 
 args <- commandArgs(trailingOnly=TRUE)
 TREE_FILE <- if (length(args)) args[1] else "MCC_28_32tip.tre"
-METADATA_FILE <- "Dryas_sampledata_popgen.csv"
+METADATA_FILE <- if (length(args) >= 2L) args[2] else "Dryas_sampledata_popgen.csv"
 OUTPUT_PREFIX <- "figures/figure3_p28_species_map"
 dir.create("figures", showWarnings=FALSE)
 AGE_MULTIPLIER <- 1 # Supplied exported MCC branch lengths are already in Ma.
@@ -28,7 +28,8 @@ TREE_HEIGHT <- 0.65 # In map-radius units.
 TIP_BASELINE <- 0.65 # Move down to reduce the gap; allow room for tip labels.
 REORDER_FOR_GEOGRAPHY <- TRUE # Rotates sister branches only; preserves topology.
 
-stopifnot(file.exists(TREE_FILE), file.exists(METADATA_FILE))
+if (!file.exists(TREE_FILE)) stop("Tree file not found: ", TREE_FILE)
+if (!file.exists(METADATA_FILE)) stop("Metadata file not found: ", METADATA_FILE, "\nSupply its path as the second argument: Rscript plot_p28_equalearth_hpd.R TREE METADATA")
 annotated <- treeio::read.beast(TREE_FILE)
 full_tree <- ape::as.phylo(annotated)
 annotations <- as.data.frame(annotated@data)
@@ -39,7 +40,10 @@ full_desc <- function(node) {
   unlist(lapply(full_children[[as.character(node)]], full_desc), use.names=FALSE)
 }
 outgroups <- c("Cermon_DW847", "Chafol_1611", "Pursta_DW848", "Purtri_DW846b")
-if (!all(outgroups %in% full_tree$tip.label)) stop("Expected the full 32-tip MCC tree.")
+present_outgroups <- intersect(outgroups, full_tree$tip.label)
+if (!((full_n == 32L && length(present_outgroups) == 4L) ||
+      (full_n == 28L && length(present_outgroups) == 0L)))
+  stop("Supply either the 32-tip full MCC or the 28-tip Dryas-only MCC.")
 keep <- vapply(annotations$node, function(z) z > full_n &&
   !any(full_desc(z) %in% outgroups), logical(1))
 ann <- annotations[keep, , drop=FALSE]
@@ -52,7 +56,7 @@ hpd_source <- data.frame(
   lower_Ma=vapply(intervals, function(z) as.numeric(z)[1], 0.0),
   upper_Ma=vapply(intervals, function(z) as.numeric(z)[2], 0.0))
 MAX_AGE <- ceiling(max(hpd_source$upper_Ma)/2)*2
-tr <- drop.tip(full_tree, outgroups)
+tr <- if (length(present_outgroups)) drop.tip(full_tree, present_outgroups) else full_tree
 if (Ntip(tr) != 28L) stop("Expected the 28-tip Dryas-only tree. Prune outgroups explicitly first.")
 if (is.null(tr$edge.length) || any(!is.finite(tr$edge.length)) || any(tr$edge.length < 0))
   stop("The input must contain finite, nonnegative dated branch lengths.")
