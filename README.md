@@ -225,7 +225,7 @@ TreeAnnotator uses `-burnin 0 -heights median` because the exported samples are 
 
 ## 6. Figure preparation
 
-Run the population tree/map plot from the project root. Supply the full 32-tip annotated MCC, including the four outgroups:
+Run the population tree/map plot from the project root. Supply either the full 32-tip annotated MCC or the pruned 28-tip Dryas MCC:
 
 ```bash
 Rscript -e 'install.packages(c("ape", "sf", "maps", "BiocManager"), repos="https://cloud.r-project.org"); BiocManager::install("treeio", ask=FALSE)'
@@ -234,7 +234,12 @@ Rscript plot_p28_equalearth_hpd.R MCC_28_32tip.tre
 
 The second command accepts an explicit tree path; for a newly summarized fossil analysis use `results_unified/p28/fossil/exports/full_MCC.tre`.
 
-Place `Dryas_sampledata_popgen.csv` in the project root. Required columns are sampleID, s170-p28, s170_BPP, s380, Longitude, Latitude, and Epithet. If labels or species assignments differ, provide `population_species_key.csv` with tree_tip,population,species, one row per population.
+Place `Dryas_sampledata_popgen.csv` in the project root, or supply its path as the second argument:
+
+```bash
+Rscript plot_p28_equalearth_hpd.R /path/to/MCC_28_28tip.tre /path/to/Dryas_sampledata_popgen.csv
+```
+ Required columns are sampleID, s170-p28, s170_BPP, s380, Longitude, Latitude, and Epithet. If labels or species assignments differ, provide `population_species_key.csv` with tree_tip,population,species, one row per population.
 
 The script reads node HPDs directly from the selected MCC, prunes four named outgroups, matches intervals by descendant populations, and scales the age axis to include every HPD. Plotted ages come from the supplied branch lengths, supporting mean or median summaries. Branch lengths are already in Ma. No separate old HPD CSV is required.
 
