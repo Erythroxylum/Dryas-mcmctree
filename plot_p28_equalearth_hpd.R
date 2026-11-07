@@ -33,6 +33,12 @@ if (!file.exists(METADATA_FILE)) stop("Metadata file not found: ", METADATA_FILE
 annotated <- treeio::read.beast(TREE_FILE)
 full_tree <- ape::as.phylo(annotated)
 annotations <- as.data.frame(annotated@data)
+# treeio may store node IDs as character strings. Numeric IDs are required
+# for internal-node filtering and positional indexing into the phylogeny.
+annotations$node <- suppressWarnings(as.integer(as.character(annotations$node)))
+if (anyNA(annotations$node) || anyDuplicated(annotations$node) ||
+    any(!annotations$node %in% seq_len(Ntip(full_tree) + full_tree$Nnode)))
+  stop("MCC annotations contain missing, duplicate, or invalid node IDs.")
 full_n <- Ntip(full_tree)
 full_children <- split(full_tree$edge[,2], full_tree$edge[,1])
 full_desc <- function(node) {
@@ -184,7 +190,11 @@ hpd$descendants <- vapply(strsplit(hpd$descendants,";",fixed=TRUE),function(labe
   }
   paste(sort(labels),collapse=";")
 }, "")
-if (anyDuplicated(hpd$descendants)) stop("Duplicate HPD clades.")
+if (anyNA(hpd$descendants) || any(!nzchar(hpd$descendants)))
+  stop("MCC interval extraction produced an empty clade.")
+if (anyDuplicated(hpd$descendants))
+  stop("Duplicate HPD clades after parsing: ",
+       paste(unique(hpd$descendants[duplicated(hpd$descendants)]), collapse=" | "))
 hit <- match(node_table$descendants,hpd$descendants)
 if (anyNA(hit)) stop("HPD clades differ from this tree; do not transfer intervals across topologies.")
 if (any(abs(node_table$age_Ma-hpd$mean_Ma[hit])>1e-5))
