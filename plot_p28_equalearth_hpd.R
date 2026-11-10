@@ -16,7 +16,7 @@ LEAF_HEIGHT <- 0.040
 LEAF_DX <- 0.030
 LEAF_DY <- 0.023
 if (!file.exists(LEAF_FILE)) stop("Leaf icon not found: ", LEAF_FILE)
-leaf_icon <- rsvg::rsvg_native(LEAF_FILE, width=600)
+leaf_icon <- rsvg::rsvg_nativeraster(LEAF_FILE, width=600)
 leaf_aspect <- ncol(leaf_icon)/nrow(leaf_icon)
 OUTPUT_PREFIX <- "figures/figure3_p28_species_map"
 dir.create("figures", showWarnings=FALSE)
