@@ -9,6 +9,8 @@ library(sf)
 args <- commandArgs(trailingOnly=TRUE)
 TREE_FILE <- if (length(args)) args[1] else "MCC_28_32tip.tre"
 METADATA_FILE <- if (length(args) >= 2L) args[2] else "Dryas_sampledata_popgen.csv"
+PIES_FILE <- if (length(args) >= 3L) args[3] else "data/phyparts_p28_pies.csv"
+PIE_RADIUS <- 0.010
 OUTPUT_PREFIX <- "figures/figure3_p28_species_map"
 dir.create("figures", showWarnings=FALSE)
 AGE_MULTIPLIER <- 1 # Supplied exported MCC branch lengths are already in Ma.
@@ -204,6 +206,47 @@ node_table$upper_Ma <- hpd$upper_Ma[hit]
 stopifnot(all(node_table$lower_Ma>=0),all(node_table$upper_Ma<=MAX_AGE),
           all(node_table$lower_Ma<=node_table$upper_Ma))
 write.csv(node_table, paste0(OUTPUT_PREFIX, "_node_ages.csv"), row.names=FALSE)
+
+# PhyParts counts: C, most frequent alternative M, and D-M.
+pies <- read.csv(PIES_FILE, stringsAsFactors=FALSE)
+required_pies <- c("phyparts_node","descendants","total","concordant",
+                   "top_conflict","other_conflict","uninformative","plot")
+if (!all(required_pies %in% names(pies))) stop("Incomplete PhyParts pie table.")
+if (any(pies$total != 9) || any(pies$uninformative != 0) ||
+    any(pies$concordant + pies$top_conflict + pies$other_conflict != pies$total) ||
+    any(as.matrix(pies[c("concordant","top_conflict","other_conflict")]) < 0))
+  stop("Invalid PhyParts counts or unresolved signal requiring a fourth category.")
+pies$descendants <- vapply(strsplit(pies$descendants, ";", fixed=TRUE), function(labels) {
+  if (!is.null(key)) {
+    ix <- match(labels, key$tree_tip)
+    if (anyNA(ix)) stop("PhyParts labels do not match population key.")
+    labels <- key$population[ix]
+  }
+  paste(sort(labels), collapse=";")
+}, "")
+if (anyDuplicated(pies$descendants)) stop("Duplicate PhyParts clades.")
+pies$node <- node_table$node[match(pies$descendants, node_table$descendants)]
+if (anyNA(pies$node)) stop("PhyParts reference clades differ from this MCC topology.")
+expected_clades <- node_table$descendants[node_table$node != root]
+if (!setequal(expected_clades, pies$descendants))
+  stop("PhyParts table must cover every non-root internal clade.")
+# Rooting on drum forces the 27-tip non-drum clade: omit its pie.
+pies$plot <- as.logical(pies$plot) &
+  lengths(strsplit(pies$descendants, ";", fixed=TRUE)) < n-1
+write.csv(pies, paste0(OUTPUT_PREFIX, "_concordance.csv"), row.names=FALSE)
+
+draw_concordance_pie <- function(x, y, counts) {
+  bounds <- c(0, cumsum(counts/sum(counts))) * 2*pi + pi/2
+  for (j in seq_along(counts)) {
+    if (counts[j] == 0) next
+    theta <- seq(bounds[j], bounds[j+1], length.out=80)
+    polygon(c(x, x+PIE_RADIUS*cos(theta)), c(y, y+PIE_RADIUS*sin(theta)),
+            col=c("black","white","#999999")[j], border=NA)
+  }
+  theta <- seq(0, 2*pi, length.out=100)
+  lines(x+PIE_RADIUS*cos(theta), y+PIE_RADIUS*sin(theta), col="black", lwd=0.65)
+}
+
 integrifolia <- c("intg_CAswGL", "intg_Nslope", "intg_nGL")
 mono <- if (all(integrifolia %in% tr$tip.label)) is.monophyletic(tr, integrifolia) else NA
 
@@ -305,6 +348,15 @@ draw <- function() {
     for (child in ch) segments(xnode[child],ynode[child],xnode[child],ynode[parent],lwd=1,
       col=if(child<=n) cols[tr$tip.label[child]] else "#343C40")
   }
+  for (j in which(pies$plot)) {
+    z <- pies$node[j]
+    draw_concordance_pie(xnode[z], ynode[z],
+      unlist(pies[j,c("concordant","top_conflict","other_conflict")], use.names=FALSE))
+  }
+  legend(x=-0.95, y=TIP_BASELINE+TREE_HEIGHT+0.07,
+    legend=c("Reference clade", "Top alternative", "Other alternatives"),
+    fill=c("black","white","#999999"), border="black", bty="n", horiz=TRUE,
+    title="Chromosome-tree concordance (n = 9)", cex=0.75)
   points(xnode[seq_len(n)],rep(TIP_BASELINE,n),pch=16,col=cols[tr$tip.label],cex=0.48)
   # Display names: old population identifier = new printed label
 label_changes <- c(
