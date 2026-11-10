@@ -353,10 +353,6 @@ draw <- function() {
     draw_concordance_pie(xnode[z], ynode[z],
       unlist(pies[j,c("concordant","top_conflict","other_conflict")], use.names=FALSE))
   }
-  legend(x=-0.95, y=TIP_BASELINE+TREE_HEIGHT+0.07,
-    legend=c("Reference clade", "Top alternative", "Other alternatives"),
-    fill=c("black","white","#999999"), border="black", bty="n", horiz=TRUE,
-    title="Chromosome-tree concordance (n = 9)", cex=0.75)
   points(xnode[seq_len(n)],rep(TIP_BASELINE,n),pch=16,col=cols[tr$tip.label],cex=0.48)
   # Display names: old population identifier = new printed label
 label_changes <- c(
