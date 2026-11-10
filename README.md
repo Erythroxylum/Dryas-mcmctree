@@ -282,3 +282,19 @@ The repository contains the setup, runner, summarizer, exporter, workflow wrappe
 ## 9. Validation status
 
 The runs were reported complete and parameters well mixed on the user's Mac; two TreeAnnotator MCC files were supplied afterward. The repository version incorporates the documented alignment-path and calibration-column fixes. Shell syntax and Python syntax are checked before upload. R/PAML execution of this packaged revision has not been tested here; retain the convergence summaries and inspect new results after any changed settings.
+
+
+## PhyParts chromosome concordance pies
+
+Generate the pie table locally from the PhyParts output prefix (requires .hist, .concon.tre, and .node.key):
+
+```bash
+Rscript prepare_phyparts_pies.R "$BASE/phyparts_p28"
+Rscript plot_p28_equalearth_hpd.R results_unified/p28/fossil/exports/MCC_28_28tip.tre Dryas_sampledata_popgen.csv
+```
+
+The converter creates data/phyparts_p28_pies.csv. Derived counts are supplied locally, not included in the repository. A custom CSV path can be supplied as the converter's second argument and the plotter's third argument.
+
+Black: concordant/9. White: largest alternative count/9. Gray: (total conflicting trees - largest alternative count)/9. Alternative counts are not summed. Counts come from PhyParts outputs and must be nonnegative and account for all nine chromosomes. Uninformative signal causes a stop, because it would require a fourth category.
+
+Clades are joined by descendant-tip sets and the population rename key. The root and the 27-tip non-drum clade forced by drum rooting are not given pies. Ages and HPDs are read from the MCC as before. Plot outputs include a _concordance.csv audit with node mappings. R plotting execution is not verified in the editing environment, where R is unavailable.
