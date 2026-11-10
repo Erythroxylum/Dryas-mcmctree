@@ -298,3 +298,16 @@ The converter creates data/phyparts_p28_pies.csv. Derived counts are supplied lo
 Black: concordant/9. White: largest alternative count/9. Gray: (total conflicting trees - largest alternative count)/9. Alternative counts are not summed. Counts come from PhyParts outputs and must be nonnegative and account for all nine chromosomes. Uninformative signal causes a stop, because it would require a fourth category.
 
 Clades are joined by descendant-tip sets and the population rename key. The root and the 27-tip non-drum clade forced by drum rooting are not given pies. Ages and HPDs are read from the MCC as before. Plot outputs include a _concordance.csv audit with node mappings. R plotting execution is not verified in the editing environment, where R is unavailable.
+
+
+## Fossil leaf markers in Figure 3
+
+The plot uses the supplied assets/Fig1-leaf.svg at the crown of non-drummondii Dryas (6.0 Ma minimum) and crown AIH (3.4 Ma minimum). These markers assume the fossil calibration scenario. The script checks explicit clade membership, writes a _fossil_calibrations.csv audit, and offsets each leaf from the node and concordance pie. Adjust LEAF_HEIGHT, LEAF_DX, and LEAF_DY near the top of the plot script for placement.
+
+Install the additional SVG renderer in the active Conda environment:
+
+```bash
+conda install -c conda-forge r-rsvg
+```
+
+The original SVG is retained; rsvg renders a high-resolution transparent bitmap for embedding in base-R PDF/PNG output. The concordance annotation is omitted. Placement has not been rendered in R in the editing environment.
