@@ -1,6 +1,6 @@
 # Run from this folder in RStudio: source("plot_p28_equalearth_hpd.R")
 # Uses your pruned all-chromosome MCC chronogram without modifying topology or dates.
-packages <- c("ape", "sf", "maps", "treeio")
+packages <- c("ape", "sf", "maps", "treeio", "rsvg")
 missing <- setdiff(packages, rownames(installed.packages()))
 if (length(missing)) stop("Install required packages first: ", paste(missing, collapse=", "))
 library(ape)
@@ -11,6 +11,13 @@ TREE_FILE <- if (length(args)) args[1] else "MCC_28_32tip.tre"
 METADATA_FILE <- if (length(args) >= 2L) args[2] else "Dryas_sampledata_popgen.csv"
 PIES_FILE <- if (length(args) >= 3L) args[3] else "data/phyparts_p28_pies.csv"
 PIE_RADIUS <- 0.010
+LEAF_FILE <- "assets/Fig1-leaf.svg"
+LEAF_HEIGHT <- 0.040
+LEAF_DX <- 0.030
+LEAF_DY <- 0.023
+if (!file.exists(LEAF_FILE)) stop("Leaf icon not found: ", LEAF_FILE)
+leaf_icon <- rsvg::rsvg_native(LEAF_FILE, width=600)
+leaf_aspect <- ncol(leaf_icon)/nrow(leaf_icon)
 OUTPUT_PREFIX <- "figures/figure3_p28_species_map"
 dir.create("figures", showWarnings=FALSE)
 AGE_MULTIPLIER <- 1 # Supplied exported MCC branch lengths are already in Ma.
@@ -251,6 +258,34 @@ integrifolia <- c("intg_CAswGL", "intg_Nslope", "intg_nGL")
 mono <- if (all(integrifolia %in% tr$tip.label)) is.monophyletic(tr, integrifolia) else NA
 
 
+
+# Fossil calibration markers for the current fossil scenario.
+# Membership is explicit and checked against the plotted topology.
+original_aih <- c("ajan_Interior", "ajan_Seward", "alas_Interior", "alas_Seward",
+  "hook_CO", "hook_north", "intg_CAswGL", "intg_Nslope", "intg_nGL")
+map_calibration_tips <- function(tips) {
+  if (is.null(key)) return(tips)
+  ix <- match(tips,key$tree_tip)
+  if (anyNA(ix)) stop("Calibration tips missing from population key.")
+  key$population[ix]
+}
+drum_tip <- map_calibration_tips("drum")
+if (!drum_tip %in% tr$tip.label) stop("Cannot identify drummondii calibration boundary.")
+calibration_sets <- list(core_Dryas=setdiff(tr$tip.label,drum_tip),
+                         AIH=map_calibration_tips(original_aih))
+calibration_nodes <- vapply(calibration_sets,function(tips) {
+  if (!all(tips %in% tr$tip.label)) stop("Fossil calibration tips missing from tree.")
+  z <- ape::getMRCA(tr,tips)
+  if (is.null(z) || !setequal(descendants(z),tips))
+    stop("Fossil calibration set is not an exact clade in this tree.")
+  as.integer(z)
+}, 0L)
+calibration_table <- data.frame(
+  calibration=names(calibration_nodes),node=unname(calibration_nodes),
+  minimum_Ma=c(6.0,3.4),node_age_Ma=ages[calibration_nodes],
+  descendants=vapply(calibration_sets,function(tips) paste(sort(tips),collapse=";"),""))
+write.csv(calibration_table,paste0(OUTPUT_PREFIX,"_fossil_calibrations.csv"),row.names=FALSE)
+
 # Rotate child order toward geography; branch lengths and clades are unchanged.
 pop_x <- tapply(d$x[d$in_s170], d$population[d$in_s170], mean)
 leaf_order <- function(node) {
@@ -352,6 +387,14 @@ draw <- function() {
     z <- pies$node[j]
     draw_concordance_pie(xnode[z], ynode[z],
       unlist(pies[j,c("concordant","top_conflict","other_conflict")], use.names=FALSE))
+  }
+  # Offset the supplied leaf artwork from the calibrated nodes and their pies.
+  for (z in calibration_nodes) {
+    lx <- xnode[z]+LEAF_DX
+    ly <- ynode[z]+LEAF_DY
+    rasterImage(leaf_icon, lx-LEAF_HEIGHT*leaf_aspect/2, ly-LEAF_HEIGHT/2,
+                lx+LEAF_HEIGHT*leaf_aspect/2, ly+LEAF_HEIGHT/2,
+                interpolate=TRUE)
   }
   points(xnode[seq_len(n)],rep(TIP_BASELINE,n),pch=16,col=cols[tr$tip.label],cex=0.48)
   # Display names: old population identifier = new printed label
