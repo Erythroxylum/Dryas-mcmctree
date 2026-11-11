@@ -313,7 +313,7 @@ conda install -c conda-forge r-rsvg
 The original SVG is retained; rsvg renders a high-resolution transparent bitmap for embedding in base-R PDF/PNG output. The concordance annotation is omitted. Placement has not been rendered in R in the editing environment.
 
 
-## Chromosome 1 and majority-rule topology figures
+## All chromosome and majority-rule topology figures
 
 From the repository root, supply the directory containing the nine individual CASTER trees rooted on drum:
 
@@ -324,7 +324,8 @@ Rscript plot_p28_topology_summaries.R "$BASE/phyparts_input_rooted"
 Requires only ape. The directory must contain one tree per chromosome (chr1.tre or s170-p28.ch1.drum_rooted.tre naming is accepted). All trees must have the same 28 tips and drum as one of two root daughters.
 
 Outputs in figures/topology_summaries/:
-- p28_chromosome1.pdf and .png, .nwk topology, and _pies.csv.
+- p28_chromosome1 through p28_chromosome9: each has .pdf and .png figures, a .nwk topology, and a _pies.csv table.
+- p28_all_chromosomes.pdf: nine pages, one chromosome per page, in chromosome order.
 - p28_majority_rule.pdf and .png, .nwk topology, and _pies.csv.
 
 The summary is a rooted majority-rule consensus: clades must occur in at least five of the nine trees; unresolved relationships remain polytomies. All chromosomes receive equal weight. These are cladograms with arbitrary display lengths, no date axis, and no fossil markers.
@@ -337,4 +338,4 @@ To generate the existing dated figure and both companions together, provide the 
 Rscript plot_p28_equalearth_hpd.R results_unified/p28/fossil/exports/MCC_28_28tip.tre Dryas_sampledata_popgen.csv data/phyparts_p28_pies.csv "$BASE/phyparts_input_rooted"
 ```
 
-The new R plotting code has not been executed in the editing environment because R is unavailable.
+The R plotting code has not been executed in the editing environment because R is unavailable.
