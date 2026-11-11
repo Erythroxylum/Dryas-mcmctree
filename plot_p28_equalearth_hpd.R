@@ -449,3 +449,9 @@ png(paste0(OUTPUT_PREFIX,".png"),width=4800,height=3000,res=300)
 draw(); dev.off()
 if (interactive()) draw()
 message(sprintf("Done: %d samples (%d S170); root %.4f Ma; integrifolia monophyletic: %s",nrow(d),sum(d$in_s170),root_age,mono))
+
+# Optional fourth argument: rooted CASTER chromosome-tree directory.
+if (length(args)>=4L) {
+  status <- system2("Rscript",c("plot_p28_topology_summaries.R",shQuote(args[4])))
+  if (status!=0) stop("Topology summary plotting failed (status ",status,").")
+}
