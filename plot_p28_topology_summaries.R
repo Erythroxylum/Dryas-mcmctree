@@ -106,6 +106,29 @@ render_consensus <- function(a) {
 references <- setNames(lapply(seq_len(9L),function(i) trees[[i]]),
   paste0("chromosome",seq_len(9L)))
 references$majority_rule <- read.tree(text=paste0(render_consensus(tips),";"))
+# MCC among observed chromosome candidates: maximize product of clade frequencies.
+# Use log frequencies for numerical stability, with equal chromosome weights.
+binary <- vapply(trees,function(tr) all(table(tr$edge[,1])==2L),TRUE)
+if (!all(binary))
+  stop("MCC candidates must be fully bifurcating after collapsing single-child nodes.")
+mcc_log_scores <- vapply(chrom_clades,function(d) {
+  keys <- unique(d$descendants[d$size>=2L & d$size<28L])
+  probabilities <- as.numeric(frequency[keys])/length(trees)
+  if (length(keys)!=26L || any(!is.finite(probabilities)) || any(probabilities<=0))
+    stop("Invalid clade frequencies in MCC candidate.")
+  sum(log(probabilities))
+},0.0)
+mcc_ties <- which(abs(mcc_log_scores-max(mcc_log_scores))<1e-10)
+mcc_chr <- min(mcc_ties)
+references$mcc <- trees[[mcc_chr]]
+score_table <- data.frame(chromosome=seq_len(9L),log_clade_credibility=mcc_log_scores,
+  clade_credibility=exp(mcc_log_scores),tied_for_max=seq_len(9L) %in% mcc_ties,
+  selected=seq_len(9L)==mcc_chr)
+write.csv(score_table,file.path(output,"p28_mcc_scores.csv"),row.names=FALSE)
+message("Chromosome-frequency MCC selected chromosome ",mcc_chr,
+  if (length(mcc_ties)>1) paste0("; ties: ",paste(mcc_ties,collapse=","),
+    " (lowest chromosome number selected)") else "")
+
 key <- if (file.exists("population_species_key.csv"))
   read.csv("population_species_key.csv",stringsAsFactors=FALSE) else NULL
 pie_colors <- c("black","white","#999999")
@@ -157,6 +180,7 @@ draw_tree <- function(tr,counts,title) {
 plot_counts <- list()
 topology_title <- function(name) {
   if (name=="majority_rule") return("Majority-rule consensus of nine chromosome trees")
+  if (name=="mcc") return(paste0("Chromosome-frequency MCC (chromosome ",mcc_chr,")"))
   paste("Chromosome",sub("^chromosome","",name),"topology")
 }
 for (name in names(references)) {
@@ -179,4 +203,8 @@ pdf(file.path(output,"p28_all_chromosomes.pdf"),width=9,height=11,useDingbats=FA
 for (name in paste0("chromosome",seq_len(9L)))
   draw_tree(references[[name]],plot_counts[[name]],topology_title(name))
 dev.off()
-message("Wrote all nine chromosome topology figures, nine-page PDF, and majority-rule summary to ",output)
+pdf(file.path(output,"p28_summaries.pdf"),width=9,height=11,useDingbats=FALSE)
+for (name in c("majority_rule","mcc"))
+  draw_tree(references[[name]],plot_counts[[name]],topology_title(name))
+dev.off()
+message("Wrote nine chromosome figures, majority-rule and MCC summaries, and combined PDFs to ",output)
