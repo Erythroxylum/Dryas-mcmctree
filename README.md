@@ -339,3 +339,12 @@ Rscript plot_p28_equalearth_hpd.R results_unified/p28/fossil/exports/MCC_28_28ti
 ```
 
 The R plotting code has not been executed in the editing environment because R is unavailable.
+
+
+### Fully bifurcating MCC summary
+
+The same topology-summary command also exports p28_mcc.pdf, .png, .nwk, and _pies.csv, plus p28_mcc_scores.csv for all nine candidates. p28_summaries.pdf contains the majority-rule consensus and MCC on two separate pages.
+
+MCC selection maximizes the sum of log clade frequencies across the candidate's internal clades, using frequencies among the nine chromosomes and excluding the whole-tree root. The forced non-drum clade has frequency 1 and does not affect the score. All candidates must be fully bifurcating after redundant single-child nodes are collapsed. Exact score ties within 1e-10 are reported; the lowest chromosome number is selected deterministically.
+
+This is a chromosome-frequency MCC, not a posterior-probability tree: the inputs are nine chromosome point estimates. It selects one observed topology and does not arbitrarily resolve majority-rule polytomies. The majority-rule output is retained. Neither summary receives calendar dates or fossil markers. Independently calculated scores for the supplied nine trees select chromosome 1; R rendering remains unverified in the editing environment.
