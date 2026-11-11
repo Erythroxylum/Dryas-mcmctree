@@ -24,7 +24,9 @@ trees <- lapply(files,function(f) {
   children <- tr$edge[tr$edge[,1]==root,2]
   if (length(children)!=2L || !match("drum",tr$tip.label) %in% children)
     stop("Tree must already be rooted with drum as one root daughter: ",f)
-  tr
+  # Work on a topology plotting copy; source files retain all annotations.
+  tr$node.label <- NULL
+  ape::collapse.singles(tr)
 })
 if (!all(vapply(trees,function(tr) setequal(tr$tip.label,trees[[1]]$tip.label),TRUE)))
   stop("Chromosome taxon sets differ.")
@@ -39,14 +41,15 @@ tree_clades <- function(tr) {
     size=vapply(nodes,function(z) length(desc(z)),0L))
 }
 chrom_clades <- lapply(trees,tree_clades)
-all_keys <- unlist(lapply(chrom_clades,function(d) d$descendants[d$size<28]),use.names=FALSE)
+all_keys <- unlist(lapply(chrom_clades,function(d) unique(d$descendants[d$size>=2L & d$size<28L])),use.names=FALSE)
 frequency <- table(all_keys)
 sets <- lapply(names(frequency),function(s) strsplit(s,";",fixed=TRUE)[[1]])
 incompatible <- function(a,b) length(intersect(a,b))>0L &&
   length(setdiff(a,b))>0L && length(setdiff(b,a))>0L
 counts_for <- function(tr, reference_name) {
   d <- tree_clades(tr); root <- setdiff(tr$edge[,1],tr$edge[,2])
-  d <- d[d$node!=root,,drop=FALSE]
+  d <- d[d$node!=root & d$size>=2L & d$size<28L,,drop=FALSE]
+  if (anyDuplicated(d$descendants)) stop("Duplicate clades remain after collapsing single-child nodes.")
   values <- lapply(d$descendants,function(s) {
     a <- strsplit(s,";",fixed=TRUE)[[1]]
     c <- sum(vapply(chrom_clades,function(x) s %in% x$descendants,TRUE))
@@ -100,7 +103,7 @@ render_consensus <- function(a) {
   order <- order(vapply(direct,function(b) min(match(b,tips)),0L))
   paste0("(",paste(vapply(direct[order],render_consensus,""),collapse=","),")")
 }
-references <- list(chromosome1=read.tree(files[1]),
+references <- list(chromosome1=trees[[1]],
   majority_rule=read.tree(text=paste0(render_consensus(tips),";")))
 key <- if (file.exists("population_species_key.csv"))
   read.csv("population_species_key.csv",stringsAsFactors=FALSE) else NULL
