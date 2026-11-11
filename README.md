@@ -311,3 +311,30 @@ conda install -c conda-forge r-rsvg
 ```
 
 The original SVG is retained; rsvg renders a high-resolution transparent bitmap for embedding in base-R PDF/PNG output. The concordance annotation is omitted. Placement has not been rendered in R in the editing environment.
+
+
+## Chromosome 1 and majority-rule topology figures
+
+From the repository root, supply the directory containing the nine individual CASTER trees rooted on drum:
+
+```bash
+Rscript plot_p28_topology_summaries.R "$BASE/phyparts_input_rooted"
+```
+
+Requires only ape. The directory must contain one tree per chromosome (chr1.tre or s170-p28.ch1.drum_rooted.tre naming is accepted). All trees must have the same 28 tips and drum as one of two root daughters.
+
+Outputs in figures/topology_summaries/:
+- p28_chromosome1.pdf and .png, .nwk topology, and _pies.csv.
+- p28_majority_rule.pdf and .png, .nwk topology, and _pies.csv.
+
+The summary is a rooted majority-rule consensus: clades must occur in at least five of the nine trees; unresolved relationships remain polytomies. All chromosomes receive equal weight. These are cladograms with arbitrary display lengths, no date axis, and no fossil markers.
+
+Pie counts are recalculated for each reference. Black counts exact matching rooted clades; white counts the most frequent incompatible clade; gray is the number of distinct conflicting chromosome trees minus that maximum. Rooted clades conflict if they overlap and neither contains the other. This direct method is used only for the complete, identical taxon sets supplied here. Its complete alternative histograms reproduced all 26 clades of the supplied PhyParts primary-reference results. Uninformative signal triggers an error. Root and forced non-drum sister-clade pies are omitted. Pie colors and omission of the concordance legend match Figure 3.
+
+To generate the existing dated figure and both companions together, provide the chromosome directory as the fourth argument:
+
+```bash
+Rscript plot_p28_equalearth_hpd.R results_unified/p28/fossil/exports/MCC_28_28tip.tre Dryas_sampledata_popgen.csv data/phyparts_p28_pies.csv "$BASE/phyparts_input_rooted"
+```
+
+The new R plotting code has not been executed in the editing environment because R is unavailable.
