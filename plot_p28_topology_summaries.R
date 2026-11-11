@@ -103,8 +103,9 @@ render_consensus <- function(a) {
   order <- order(vapply(direct,function(b) min(match(b,tips)),0L))
   paste0("(",paste(vapply(direct[order],render_consensus,""),collapse=","),")")
 }
-references <- list(chromosome1=trees[[1]],
-  majority_rule=read.tree(text=paste0(render_consensus(tips),";")))
+references <- setNames(lapply(seq_len(9L),function(i) trees[[i]]),
+  paste0("chromosome",seq_len(9L)))
+references$majority_rule <- read.tree(text=paste0(render_consensus(tips),";"))
 key <- if (file.exists("population_species_key.csv"))
   read.csv("population_species_key.csv",stringsAsFactors=FALSE) else NULL
 pie_colors <- c("black","white","#999999")
@@ -153,19 +154,29 @@ draw_tree <- function(tr,counts,title) {
     lines(x[z]+rx*cos(a),y[z]+ry*sin(a),lwd=0.6)
   }
 }
+plot_counts <- list()
+topology_title <- function(name) {
+  if (name=="majority_rule") return("Majority-rule consensus of nine chromosome trees")
+  paste("Chromosome",sub("^chromosome","",name),"topology")
+}
 for (name in names(references)) {
   tr <- references[[name]]
   message("Calculating pies for ",name)
   counts <- counts_for(tr,name)
+  plot_counts[[name]] <- counts
   tr$node.label <- NULL; tr$edge.length <- NULL; tr$root.edge <- NULL
   prefix <- file.path(output,paste0("p28_",name))
   write.tree(tr,paste0(prefix,".nwk"))
   write.csv(counts,paste0(prefix,"_pies.csv"),row.names=FALSE)
-  title <- if (name=="chromosome1") "Chromosome 1 topology" else
-    "Majority-rule consensus of nine chromosome trees"
+  title <- topology_title(name)
   pdf(paste0(prefix,".pdf"),width=9,height=11,useDingbats=FALSE)
   draw_tree(tr,counts,title); dev.off()
   png(paste0(prefix,".png"),width=2700,height=3300,res=300)
   draw_tree(tr,counts,title); dev.off()
 }
-message("Wrote chromosome 1 and majority-rule topology figures to ",output)
+# Nine-page PDF for browsing or printing all chromosome topologies together.
+pdf(file.path(output,"p28_all_chromosomes.pdf"),width=9,height=11,useDingbats=FALSE)
+for (name in paste0("chromosome",seq_len(9L)))
+  draw_tree(references[[name]],plot_counts[[name]],topology_title(name))
+dev.off()
+message("Wrote all nine chromosome topology figures, nine-page PDF, and majority-rule summary to ",output)
