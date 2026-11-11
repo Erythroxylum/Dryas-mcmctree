@@ -44,7 +44,7 @@ frequency <- table(all_keys)
 sets <- lapply(names(frequency),function(s) strsplit(s,";",fixed=TRUE)[[1]])
 incompatible <- function(a,b) length(intersect(a,b))>0L &&
   length(setdiff(a,b))>0L && length(setdiff(b,a))>0L
-counts_for <- function(tr) {
+counts_for <- function(tr, reference_name) {
   d <- tree_clades(tr); root <- setdiff(tr$edge[,1],tr$edge[,2])
   d <- d[d$node!=root,,drop=FALSE]
   values <- lapply(d$descendants,function(s) {
@@ -61,13 +61,47 @@ counts_for <- function(tr) {
   result <- cbind(d,as.data.frame(do.call(rbind,values)))
   result$total <- 9L
   result$plot <- result$size<27L
-  if (any(as.matrix(result[c("concordant","top_conflict","other_conflict","uninformative")])<0) ||
-      any(result$uninformative!=0)) stop("Unexpected counts: unresolved input signal requires a fourth slice.")
+  # Separate invalid counts from genuinely unresolved input signal.
+  count_columns <- c("concordant","top_conflict","other_conflict","uninformative")
+  invalid <- apply(as.matrix(result[count_columns]),1,function(v)
+    any(!is.finite(v)) || any(v<0) || sum(v)!=9)
+  unresolved <- result$uninformative>0
+  if (any(invalid | unresolved)) {
+    audit <- file.path(output,paste0("p28_",reference_name,"_count_diagnostics.csv"))
+    write.csv(result,audit,row.names=FALSE)
+    bad <- result[invalid | unresolved,,drop=FALSE]
+    print(bad,row.names=FALSE)
+    if (any(invalid))
+      stop("Invalid counts for ",reference_name,"; see ",audit)
+    stop("Unresolved chromosome signal for ",reference_name,"; see ",audit,
+      ". This is not caused by polytomies in the summary reference.")
+  }
   result
 }
 # These trees are topology summaries; supplied CASTER branch lengths are not dates.
-references <- list(chromosome1=trees[[1]],
-  majority_rule=consensus(trees,p=0.5,check.labels=TRUE,rooted=TRUE))
+# Assemble majority clades explicitly, keeping the original taxon labels.
+# This avoids tip-number remapping by consensus routines affecting a shared reference.
+majority_keys <- names(frequency)[as.integer(frequency)>=5L]
+majority_sets <- lapply(majority_keys,function(s) strsplit(s,";",fixed=TRUE)[[1]])
+if (any(vapply(majority_sets,function(a)
+  any(vapply(majority_sets,function(b) incompatible(a,b),TRUE)),TRUE)))
+  stop("Majority clades are incompatible; inspect chromosome inputs.")
+tips <- trees[[1]]$tip.label
+selected <- c(majority_sets,as.list(tips))
+render_consensus <- function(a) {
+  if (length(a)==1L) return(a)
+  candidates <- selected[vapply(selected,function(b)
+    length(b)<length(a) && all(b %in% a),TRUE)]
+  direct <- candidates[!vapply(candidates,function(b)
+    any(vapply(candidates,function(z)
+      length(z)>length(b) && all(b %in% z),TRUE)),TRUE)]
+  if (!setequal(unlist(direct,use.names=FALSE),a))
+    stop("Consensus children do not cover parent clade.")
+  order <- order(vapply(direct,function(b) min(match(b,tips)),0L))
+  paste0("(",paste(vapply(direct[order],render_consensus,""),collapse=","),")")
+}
+references <- list(chromosome1=read.tree(files[1]),
+  majority_rule=read.tree(text=paste0(render_consensus(tips),";")))
 key <- if (file.exists("population_species_key.csv"))
   read.csv("population_species_key.csv",stringsAsFactors=FALSE) else NULL
 pie_colors <- c("black","white","#999999")
@@ -118,7 +152,8 @@ draw_tree <- function(tr,counts,title) {
 }
 for (name in names(references)) {
   tr <- references[[name]]
-  counts <- counts_for(tr)
+  message("Calculating pies for ",name)
+  counts <- counts_for(tr,name)
   tr$node.label <- NULL; tr$edge.length <- NULL; tr$root.edge <- NULL
   prefix <- file.path(output,paste0("p28_",name))
   write.tree(tr,paste0(prefix,".nwk"))
