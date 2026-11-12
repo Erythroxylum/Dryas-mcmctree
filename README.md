@@ -348,3 +348,51 @@ The same topology-summary command also exports p28_mcc.pdf, .png, .nwk, and _pie
 MCC selection maximizes the sum of log clade frequencies across the candidate's internal clades, using frequencies among the nine chromosomes and excluding the whole-tree root. The forced non-drum clade has frequency 1 and does not affect the score. All candidates must be fully bifurcating after redundant single-child nodes are collapsed. Exact score ties within 1e-10 are reported; the lowest chromosome number is selected deterministically.
 
 This is a chromosome-frequency MCC, not a posterior-probability tree: the inputs are nine chromosome point estimates. It selects one observed topology and does not arbitrarily resolve majority-rule polytomies. The majority-rule output is retained. Neither summary receives calendar dates or fossil markers. Independently calculated scores for the supplied nine trees select chromosome 1; R rendering remains unverified in the editing environment.
+
+
+## Separate dating on a resolved majority-rule topology
+
+This p28-only comparison has its own config_majority.sh and workflow_majority.sh. It writes to results_majority_resolved/p28/fossil/, preserving the original results_unified runs. It uses fossil calibrations only, with no BPP crown-Dryas constraint. Two chains and all nine chromosome alignments retain the original clock, rate priors, and sampling settings.
+
+MCMCTree requires a binary reference. prepare_majority_dating.R retains every clade occurring in at least five chromosomes, then adds observed compatible clades in descending frequency order. Equal-frequency ties use lexical clade keys (deterministic, not evidence for preferring the winner). The exact added clades and tied candidates are recorded in topologies/majority_resolved/p28_majority_resolution_choices.tsv. For the supplied nine trees, the three resolutions have 4/9, 3/9, and 1/9 support. This is a resolved majority-rule reference, not the raw consensus or an MCC tree.
+
+The 28 population tips are mapped back to sample IDs with pop28_representatives.tsv. The existing pop28_fixed_samples.tre supplies the four-outgroup scaffold only; its Dryas subtree is replaced. Exact core-Dryas and AIH calibration membership is verified against clade_membership.tsv. The 6.0 Ma core-Dryas and 3.4 Ma AIH minima and original outgroup/root constraints are retained.
+
+From the repository root:
+
+```bash
+# BASE is the CASTER chromosome-results directory used for PhyParts.
+bash workflow_majority.sh prepare "$BASE/phyparts_input_rooted"
+
+# Review the three resolutions before launching the dating analysis.
+cat topologies/majority_resolved/p28_majority_resolution_choices.tsv
+
+bash workflow_majority.sh setup
+JOBS=4 bash workflow_majority.sh run
+bash workflow_majority.sh summarize
+```
+
+The default filtered alignment folder is p28_chromosome_alignments_sitefiltered, matching the supplied repository inventory. If yours is named chromosome_alignments_sitefiltered instead, use:
+
+```bash
+ALIGNMENTS_P28=chromosome_alignments_sitefiltered bash workflow_majority.sh setup
+```
+
+Setup requires a new empty results directory. Prepare also stops if its generated topology files already exist. Do not delete completed runs or repeat setup in them. Run can be invoked again to skip completed chains. The new topology needs fresh likelihood derivatives and branch-length optimization; no old chromosome-4 in.BV/out.BV files are copied.
+
+Inspect convergence and trace plots using the original README guidance with results_majority_resolved replacing results_unified. After accepting diagnostics:
+
+```bash
+bash workflow_majority.sh export
+open results_majority_resolved/p28/fossil/exports
+```
+
+Run TreeAnnotator separately on full.nex and dryas.nex (burn-in 0, MCC topology, median heights) or use the optional CLI stage:
+
+```bash
+bash workflow_majority.sh mcc
+```
+
+Optional matching prior-only runs use PRIOR_ONLY=1 for setup, run, summarize, and export, writing fossil_prior. Prepare is shared and runs only once. Change MAJORITY_TOPOLOGY_DIR and RESULTS_MAJORITY to new directories to explore different resolution policies; never overwrite the previous analysis.
+
+Validation in the editing environment: shell syntax checked; the equivalent clade-selection calculation on all nine supplied CASTER trees preserved all majority clades, resolved the three remaining branches using observed compatible clades, and retained AIH. R/PAML execution, local sample mappings, and outgroup grafting must be checked by the workflow on the user's files; no new dating run has been executed here.
